@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SONIC NEXUS // Audio-Visual Soundscape Suite</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        sonic: {
+                            950: '#030712',
+                            900: '#0b0f19',
+                            800: '#131b2e',
+                            700: '#1e293b',
+                            cyan: '#06b6d4',
+                            magenta: '#ec4899',
+                            emerald: '#10b981',
+                            amber: '#f59e0b'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: #030712;
+            color: #f3f4f6;
+            overflow-x: hidden;
+        }
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #030712;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #06b6d4;
+        }
+        .glass-panel {
+            background: rgba(19, 27, 46, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glow-cyan {
+            box-shadow: 0 0 35px rgba(6, 182, 212, 0.3);
+        }
+        .text-glow {
+            text-shadow: 0 0 25px currentColor;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col bg-sonic-950 text-gray-100 selection:bg-cyan-500 selection:text-black">
+
+    <!-- Foolproof Audio Start Modal Overlay -->
+    <div id="start-modal" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-xl flex items-center justify-center p-4 transition-all duration-500">
+        <div class="glass-panel border border-cyan-500/40 rounded-3xl max-w-lg w-full p-8 shadow-[0_0_50px_rgba(6,182,212,0.2)] text-center relative overflow-hidden">
+            <div class="absolute -top-12 -right-12 w-36 h-36 bg-cyan-500/10 rounded-full blur-2xl pointer-events-none"></div>
+            <div class="absolute -bottom-12 -left-12 w-36 h-36 bg-pink-500/10 rounded-full blur-2xl pointer-events-none"></div>
+
+            <div class="w-16 h-16 mx-auto mb-6 rounded-3xl bg-gradient-to-tr from-cyan-500 via-indigo-600 to-pink-500 flex items-center justify-center glow-cyan shadow-xl animate-pulse">
+                <i class="fa-solid fa-volume-high text-white text-2xl"></i>
+            </div>
+
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-white mb-2 tracking-tight">WELCOME TO SONIC NEXUS</h2>
+            <p class="text-xs sm:text-sm text-gray-400 mb-8 leading-relaxed">
+                Click below to unlock the Web Audio synthesizer, initialize sound frequency pipelines, and launch the immersive kinetic visualizer.
+            </p>
+
+            <button onclick="initializeAndStartAudio()" class="w-full py-4 rounded-2xl bg-gradient-to-r from-cyan-500 via-indigo-500 to-pink-500 hover:from-cyan-400 hover:to-pink-400 text-black font-extrabold text-sm sm:text-base shadow-xl shadow-cyan-500/30 transition transform active:scale-95 flex items-center justify-center space-x-3 cursor-pointer">
+                <i class="fa-solid fa-bolt"></i>
+                <span>START SOUND & VISUALS</span>
+            </button>
+
+            <p class="mt-4 text-[11px] text-gray-500 mono">Requires browser audio permission • Fully synthesized in real-time</p>
+        </div>
+    </div>
+
+    <!-- Navigation Header -->
+    <header class="sticky top-0 z-40 glass-panel border-b border-gray-800/80 px-4 lg:px-8 py-3.5">
+        <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-cyan-500 via-indigo-600 to-pink-500 flex items-center justify-center glow-cyan shadow-xl">
+                    <i class="fa-solid fa-wave-square text-white text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-base tracking-wider bg-gradient-to-r from-cyan-400 via-indigo-300 to-pink-400 bg-clip-text text-transparent">SONIC NEXUS</h1>
+                    <div class="flex items-center space-x-1.5">
+                        <span id="audio-status-dot" class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                        <p id="audio-status-text" class="text-[10px] text-gray-400 mono tracking-widest">AUDIO STANDBY</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visualizer Mode Tabs -->
+            <nav class="hidden md:flex items-center bg-sonic-900/90 p-1.5 rounded-2xl border border-gray-800 shadow-inner">
+                <button onclick="setVisMode('spectrum')" id="tab-spectrum" class="vis-tab px-4 py-1.5 rounded-xl text-xs font-semibold transition-all duration-300 flex items-center space-x-2 bg-cyan-500 text-black shadow-lg shadow-cyan-500/30">
+                    <i class="fa-solid fa-chart-bar"></i>
+                    <span>Spectrum Bars</span>
+                </button>
+                <button onclick="setVisMode('radial')" id="tab-radial" class="vis-tab px-4 py-1.5 rounded-xl text-xs font-semibold transition-all duration-300 flex items-center space-x-2 text-gray-400 hover:text-white">
+                    <i class="fa-solid fa-circle-notch"></i>
+                    <span>Circular Pulsar</span>
+                </button>
+                <button onclick="setVisMode('tunnel')" id="tab-tunnel" class="vis-tab px-4 py-1.5 rounded-xl text-xs font-semibold transition-all duration-300 flex items-center space-x-2 text-gray-400 hover:text-white">
+                    <i class="fa-solid fa-bolt-lightning"></i>
+                    <span>Cyber Tunnel</span>
+                </button>
+            </nav>
+
+            <div class="flex items-center space-x-3">
+                <button onclick="toggleControlSidebar()" class="px-3.5 py-2 rounded-xl bg-sonic-800 border border-gray-700/60 hover:border-cyan-500 text-xs text-gray-200 transition flex items-center space-x-2 shadow-md">
+                    <i class="fa-solid fa-sliders text-cyan-400"></i>
+                    <span class="hidden sm:inline">Sound & Theme</span>
+                </button>
+                <button onclick="openInfoModal()" class="w-9 h-9 rounded-xl bg-sonic-800 border border-gray-700/60 hover:border-cyan-500 text-gray-300 flex items-center justify-center transition">
+                    <i class="fa-solid fa-info"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 relative flex overflow-hidden">
+        
+        <!-- Canvas Visualizer Viewport -->
+        <div id="canvas-container" class="flex-1 relative flex items-center justify-center overflow-hidden cursor-crosshair">
+            <canvas id="visualizerCanvas" class="absolute inset-0 w-full h-full block"></canvas>
+
+            <!-- Kinetic Typography Layer -->
+            <div id="kinetic-text-layer" class="absolute inset-0 pointer-events-none flex flex-col items-center justify-center text-center p-6 z-10">
+                <div id="lyric-subtitle" class="text-xs sm:text-sm mono uppercase tracking-[0.3em] text-cyan-400 opacity-90 mb-2 font-semibold">AMPLIFYING FREQUENCIES</div>
+                <h2 id="lyric-title" class="text-3xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-white text-glow transition-transform duration-100 ease-out">
+                    QUANTUM AMBIENT PAD
+                </h2>
+                <p id="lyric-desc" class="text-xs sm:text-base text-gray-400 max-w-lg mt-3 font-light tracking-wide">
+                    Live Web Audio synthesizer active • Adjust sliders or switch presets in the panel.
+                </p>
+            </div>
+
+            <!-- Floating Audio Control Deck (Bottom Center) -->
+            <div class="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-30 w-11/12 max-w-2xl">
+                <div class="glass-panel p-4 rounded-3xl border border-gray-700/50 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
+                    
+                    <!-- Track Details -->
+                    <div class="flex items-center space-x-3 w-full sm:w-auto">
+                        <div id="vinyl-icon" class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-cyan-600 to-indigo-600 flex items-center justify-center shadow-lg relative overflow-hidden">
+                            <i class="fa-solid fa-compact-disc text-white text-xl animate-spin" id="disc-spinner" style="animation-duration: 4s;"></i>
+                        </div>
+                        <div class="overflow-hidden">
+                            <h4 id="current-track-name" class="font-bold text-sm text-white truncate">Quantum Ambient Pad</h4>
+                            <p id="current-track-preset" class="text-xs text-cyan-400 mono">Preset 01 // 432 Hz Solfeggio</p>
+                        </div>
+                    </div>
+
+                    <!-- Playback Controls -->
+                    <div class="flex items-center space-x-3">
+                        <button onclick="prevPreset()" class="w-10 h-10 rounded-xl bg-sonic-800 hover:bg-sonic-700 border border-gray-700 text-gray-300 flex items-center justify-center transition">
+                            <i class="fa-solid fa-backward-step"></i>
+                        </button>
+                        <button onclick="togglePlayPause()" id="play-btn" class="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-black font-bold text-xs sm:text-sm shadow-xl shadow-cyan-500/30 flex items-center space-x-2 transition transform active:scale-95">
+                            <i id="play-icon" class="fa-solid fa-pause"></i>
+                            <span id="play-btn-text">PAUSE SYNTH</span>
+                        </button>
+                        <button onclick="nextPreset()" class="w-10 h-10 rounded-xl bg-sonic-800 hover:bg-sonic-700 border border-gray-700 text-gray-300 flex items-center justify-center transition">
+                            <i class="fa-solid fa-forward-step"></i>
+                        </button>
+                    </div>
+
+                    <!-- Master Volume -->
+                    <div class="hidden md:flex items-center space-x-2 w-32">
+                        <i class="fa-solid fa-volume-high text-xs text-gray-400"></i>
+                        <input type="range" id="master-volume" min="0" max="1" step="0.05" value="0.75" class="w-full accent-cyan-400 bg-gray-700 rounded-lg h-1.5 cursor-pointer">
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Control Panel Sidebar -->
+        <aside id="control-sidebar" class="absolute right-0 top-0 bottom-0 w-80 sm:w-90 glass-panel border-l border-gray-800 p-6 flex flex-col z-40 transform translate-x-full transition-transform duration-300 shadow-2xl overflow-y-auto">
+            <div class="flex items-center justify-between pb-4 border-b border-gray-700/60 mb-6">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-sliders text-cyan-400"></i>
+                    <h2 class="font-bold text-sm tracking-wide text-white">SYNTH & VISUAL CONTROLS</h2>
+                </div>
+                <button onclick="toggleControlSidebar()" class="text-gray-400 hover:text-white transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Color Theme Selector -->
+            <div class="space-y-3 mb-6">
+                <label class="block text-xs font-semibold text-gray-300 tracking-wider uppercase">Visual Theme Accent</label>
+                <div class="grid grid-cols-4 gap-2">
+                    <button onclick="setTheme('cyan')" class="p-2.5 rounded-xl bg-cyan-950/60 border border-cyan-500 text-xs text-cyan-300 font-semibold flex flex-col items-center gap-1 hover:bg-cyan-900/55 transition">
+                        <span class="w-3 h-3 rounded-full bg-cyan-400 shadow-[0_0_10px_#06b6d4]"></span>
+                        <span>Cyan</span>
+                    </button>
+                    <button onclick="setTheme('magenta')" class="p-2.5 rounded-xl bg-pink-950/60 border border-pink-500 text-xs text-pink-300 font-semibold flex flex-col items-center gap-1 hover:bg-pink-900/55 transition">
+                        <span class="w-3 h-3 rounded-full bg-pink-500 shadow-[0_0_10px_#ec4899]"></span>
+                        <span>Magenta</span>
+                    </button>
+                    <button onclick="setTheme('emerald')" class="p-2.5 rounded-xl bg-emerald-950/60 border border-emerald-500 text-xs text-emerald-300 font-semibold flex flex-col items-center gap-1 hover:bg-emerald-900/55 transition">
+                        <span class="w-3 h-3 rounded-full bg-emerald-400 shadow-[0_0_10px_#10b981]"></span>
+                        <span>Matrix</span>
+                    </button>
+                    <button onclick="setTheme('amber')" class="p-2.5 rounded-xl bg-amber-950/60 border border-amber-500 text-xs text-amber-300 font-semibold flex flex-col items-center gap-1 hover:bg-amber-900/55 transition">
+                        <span class="w-3 h-3 rounded-full bg-amber-400 shadow-[0_0_10px_#f59e0b]"></span>
+                        <span>Solar</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Soundscape Preset Switcher -->
+            <div class="space-y-3 mb-6">
+                <label class="block text-xs font-semibold text-gray-300 tracking-wider uppercase">Audio Soundscape Preset</label>
+                <div class="space-y-2">
+                    <button onclick="selectPreset(0)" id="preset-btn-0" class="preset-btn w-full p-3 rounded-xl bg-sonic-900 border border-cyan-500 text-left text-xs transition flex items-center justify-between">
+                        <div>
+                            <div class="font-bold text-white">Quantum Ambient Pad</div>
+                            <div class="text-[10px] text-gray-400 mono">Warm chords & deep bass</div>
+                        </div>
+                        <i class="fa-solid fa-check text-cyan-400"></i>
+                    </button>
+                    <button onclick="selectPreset(1)" id="preset-btn-1" class="preset-btn w-full p-3 rounded-xl bg-sonic-900 border border-gray-700 text-left text-xs transition flex items-center justify-between">
+                        <div>
+                            <div class="font-bold text-white">Cybernetic Pulsar Pulse</div>
+                            <div class="text-[10px] text-gray-400 mono">Rhythmic arpeggio & sub-bass</div>
+                        </div>
+                        <i class="fa-solid fa-check text-transparent"></i>
+                    </button>
+                    <button onclick="selectPreset(2)" id="preset-btn-2" class="preset-btn w-full p-3 rounded-xl bg-sonic-900 border border-gray-700 text-left text-xs transition flex items-center justify-between">
+                        <div>
+                            <div class="font-bold text-white">Deep Space Drone</div>
+                            <div class="text-[10px] text-gray-400 mono">Harmonic drone & cosmic noise</div>
+                        </div>
+                        <i class="fa-solid fa-check text-transparent"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Audio & Visual Parameter Sliders -->
+            <div class="space-y-4 pt-4 border-t border-gray-700/50 flex-1">
+                <div class="space-y-1.5">
+                    <div class="flex justify-between text-xs">
+                        <span class="text-gray-300">Filter Cutoff Frequency</span>
+                        <span id="val-cutoff" class="mono text-cyan-400">2800 Hz</span>
+                    </div>
+                    <input type="range" id="range-cutoff" min="400" max="8000" step="100" value="2800" class="w-full accent-cyan-400 bg-gray-700 rounded-lg h-1.5 cursor-pointer">
+                </div>
+
+                <div class="space-y-1.5">
+                    <div class="flex justify-between text-xs">
+                        <span class="text-gray-300">Visual Particle Density</span>
+                        <span id="val-density" class="mono text-cyan-400">90</span>
+                    </div>
+                    <input type="range" id="range-density" min="20" max="150" value="90" class="w-full accent-cyan-400 bg-gray-700 rounded-lg h-1.5 cursor-pointer">
+                </div>
+
+                <div class="space-y-1.5">
+                    <div class="flex justify-between text-xs">
+                        <span class="text-gray-300">Beat Reactivity Sensitivity</span>
+                        <span id="val-sensitivity" class="mono text-cyan-400">1.3x</span>
+                    </div>
+                    <input type="range" id="range-sensitivity" min="0.5" max="2.5" step="0.1" value="1.3" class="w-full accent-cyan-400 bg-gray-700 rounded-lg h-1.5 cursor-pointer">
+                </div>
+            </div>
+
+            <div class="pt-4 border-t border-gray-700/50 text-center">
+                <span class="text-[10px] text-gray-500 mono">Web Audio API • Canvas 2D Engine</span>
+            </div>
+        </aside>
+
+    </main>
+
+    <!-- Info Modal -->
+    <div id="info-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 hidden">
+        <div class="glass-panel border border-gray-700 rounded-3xl max-w-lg w-full p-6 shadow-2xl relative">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 rounded-xl bg-cyan-500/20 border border-cyan-500 flex items-center justify-center text-cyan-400">
+                        <i class="fa-solid fa-circle-info"></i>
+                    </div>
+                    <h3 class="font-bold text-lg text-white">About Sonic Nexus</h3>
+                </div>
+                <button onclick="closeInfoModal()" class="text-gray-400 hover:text-white transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <div class="space-y-3 text-sm text-gray-300 leading-relaxed">
+                <p><strong class="text-cyan-400">Sonic Nexus</strong> is an interactive audio-visual synthesizer combining real-time Web Audio soundscapes with kinetic typography and reactive 3D canvas visuals.</p>
+                <ul class="list-disc pl-5 space-y-1.5 text-xs text-gray-400">
+                    <li><strong class="text-white">Web Audio Synthesizer:</strong> Generates multi-oscillator chords and ambient pulsations directly in your browser.</li>
+                    <li><strong class="text-white">Reactive Visuals:</strong> Choose between Frequency Spectrum Bars, Circular Pulsar, and Cyber Tunnel Warp modes.</li>
+                    <li><strong class="text-white">Kinetic Typography:</strong> Titles and subtitles scale and pulse in real-time with the audio frequency spectrum.</li>
+                </ul>
+            </div>
+            <div class="mt-6 flex justify-end">
+                <button onclick="closeInfoModal()" class="px-5 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-bold shadow-lg shadow-cyan-500/30 transition">
+                    Got It
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-20 right-6 z-50 glass-panel border border-cyan-500/50 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center space-x-3 transform translate-y-20 opacity-0 transition-all duration-300">
+        <div class="w-6 h-6 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-xs">
+            <i class="fa-solid fa-check"></i>
+        </div>
+        <span id="toast-message" class="text-xs font-medium">Settings updated successfully</span>
+    </div>
+
+    <script>
+        // Application State
+        let audioCtx = null;
+        let isPlaying = false;
+        let analyser = null;
+        let masterGain = null;
+        let filterNode = null;
+        let synthInterval = null;
+        let currentPresetIndex = 0;
+        let visMode = 'spectrum';
+        let currentTheme = 'cyan';
+        
+        let themeColors = {
+            cyan: { primary: '#06b6d4', secondary: '#3b82f6', glow: 'rgba(6,182,212,0.4)', text: '#06b6d4' },
+            magenta: { primary: '#ec4899', secondary: '#8b5cf6', glow: 'rgba(236,72,153,0.4)', text: '#ec4899' },
+            emerald: { primary: '#10b981', secondary: '#06b6d4', glow: 'rgba(16,185,129,0.4)', text: '#10b981' },
+            amber: { primary: '#f59e0b', secondary: '#ef4444', glow: 'rgba(245,158,11,0.4)', text: '#f59e0b' }
+        };
+
+        const presets = [
+            { name: "Quantum Ambient Pad", subtitle: "Preset 01 // 432 Hz Solfeggio", chords: [130.81, 164.81, 196.00, 246.94] },
+            { name: "Cybernetic Pulsar Pulse", subtitle: "Preset 02 // Synthwave Arp", chords: [110.00, 130.81, 164.81, 220.00] },
+            { name: "Deep Space Drone", subtitle: "Preset 03 // Cosmic Harmonic", chords: [98.00, 146.83, 196.00, 293.66] }
+        ];
+
+        let particles = [];
+        let canvas = document.getElementById('visualizerCanvas');
+        let ctx = canvas.getContext('2d');
+        let width, height;
+        let mouse = { x: 0, y: 0 };
+
+        function resizeCanvas() {
+            width = canvas.width = canvas.parentElement.clientWidth;
+            height = canvas.height = canvas.parentElement.clientHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function initParticles() {
+            particles = [];
+            const count = parseInt(document.getElementById('range-density').value);
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    vx: (Math.random() - 0.5) * 1.5,
+                    vy: (Math.random() - 0.5) * 1.5,
+                    radius: Math.random() * 2.5 + 1,
+                    alpha: Math.random() * 0.7 + 0.3
+                });
+            }
+        }
+        initParticles();
+
+        // Foolproof Audio Initialization on User Click
+        async function initializeAndStartAudio() {
+            try {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') {
+                    await audioCtx.resume();
+                }
+
+                // Create Audio Nodes
+                analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 256;
+                analyser.smoothingTimeConstant = 0.85;
+
+                masterGain = audioCtx.createGain();
+                masterGain.gain.value = parseFloat(document.getElementById('master-volume').value);
+
+                filterNode = audioCtx.createBiquadFilter();
+                filterNode.type = 'lowpass';
+                filterNode.frequency.value = parseFloat(document.getElementById('range-cutoff').value);
+
+                // Connect Pipeline: Filter -> Analyser -> MasterGain -> Destination
+                filterNode.connect(analyser);
+                analyser.connect(masterGain);
+                masterGain.connect(audioCtx.destination);
+
+                isPlaying = true;
+                
+                // Hide Start Modal
+                const modal = document.getElementById('start-modal');
+                modal.style.opacity = '0';
+                setTimeout(() => modal.classList.add('hidden'), 500);
+
+                // Update UI Indicators
+                document.getElementById('audio-status-dot').className = "w-2 h-2 rounded-full bg-emerald-400 animate-ping";
+                document.getElementById('audio-status-text').textContent = "AUDIO ACTIVE (SYNTH ON)";
+                document.getElementById('play-btn-text').textContent = "PAUSE SYNTH";
+                document.getElementById('play-icon').className = "fa-solid fa-pause";
+                document.getElementById('disc-spinner').style.animationPlayState = "running";
+
+                showToast("Synthesizer audio engine active!");
+                startSynthLoop();
+            } catch (err) {
+                console.error("Audio initialization error:", err);
+                showToast("Error starting audio. Please try again.");
+            }
+        }
+
+        function togglePlayPause() {
+            if (!audioCtx) {
+                initializeAndStartAudio();
+                return;
+            }
+
+            const btnText = document.getElementById('play-btn-text');
+            const playIcon = document.getElementById('play-icon');
+            const spinner = document.getElementById('disc-spinner');
+            const dot = document.getElementById('audio-status-dot');
+            const statusText = document.getElementById('audio-status-text');
+
+            if (isPlaying) {
+                isPlaying = false;
+                if (synthInterval) clearInterval(synthInterval);
+                if (audioCtx && audioCtx.state === 'running') {
+                    audioCtx.suspend();
+                }
+                btnText.textContent = "PLAY SYNTH";
+                playIcon.className = "fa-solid fa-play";
+                spinner.style.animationPlayState = "paused";
+                dot.className = "w-2 h-2 rounded-full bg-amber-500";
+                statusText.textContent = "AUDIO PAUSED";
+                showToast("Synthesizer paused");
+            } else {
+                if (audioCtx && audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                isPlaying = true;
+                btnText.textContent = "PAUSE SYNTH";
+                playIcon.className = "fa-solid fa-pause";
+                spinner.style.animationPlayState = "running";
+                dot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-ping";
+                statusText.textContent = "AUDIO ACTIVE (SYNTH ON)";
+                showToast("Synthesizer resumed");
+                startSynthLoop();
+            }
+        }
+
+        function startSynthLoop() {
+            if (synthInterval) clearInterval(synthInterval);
+            playChordWave();
+            synthInterval = setInterval(() => {
+                if (isPlaying && audioCtx && audioCtx.state === 'running') {
+                    playChordWave();
+                }
+            }, 3600);
+        }
+
+        function playChordWave() {
+            if (!isPlaying || !audioCtx || audioCtx.state !== 'running') return;
+            const preset = presets[currentPresetIndex];
+            const freqs = preset.chords;
+
+            freqs.forEach((freq, idx) => {
+                try {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+
+                    osc.type = idx % 2 === 0 ? 'sine' : 'triangle';
+                    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+                    const now = audioCtx.currentTime;
+                    gain.gain.setValueAtTime(0, now);
+                    gain.gain.linearRampToValueAtTime(0.14, now + 0.9);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, now + 3.4);
+
+                    osc.connect(gain);
+                    gain.connect(filterNode);
+
+                    osc.start(now);
+                    osc.stop(now + 3.5);
+                } catch (e) {
+                    // Ignore scheduling artifacts
+                }
+            });
+        }
+
+        function toggleControlSidebar() {
+            document.getElementById('control-sidebar').classList.toggle('translate-x-full');
+        }
+
+        function openInfoModal() {
+            document.getElementById('info-modal').classList.remove('hidden');
+        }
+
+        function closeInfoModal() {
+            document.getElementById('info-modal').classList.add('hidden');
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-message').textContent = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 2500);
+        }
+
+        function setVisMode(mode) {
+            visMode = mode;
+            document.querySelectorAll('.vis-tab').forEach(btn => {
+                btn.className = "vis-tab px-4 py-1.5 rounded-xl text-xs font-semibold transition-all duration-300 flex items-center space-x-2 text-gray-400 hover:text-white";
+            });
+            let active = document.getElementById(`tab-${mode}`);
+            let theme = themeColors[currentTheme];
+            active.className = `vis-tab px-4 py-1.5 rounded-xl text-xs font-semibold transition-all duration-300 flex items-center space-x-2 text-black shadow-lg`;
+            active.style.backgroundColor = theme.primary;
+            showToast(`Visualizer mode: ${mode.toUpperCase()}`);
+        }
+
+        function setTheme(themeName) {
+            currentTheme = themeName;
+            let theme = themeColors[themeName];
+            document.getElementById('lyric-subtitle').style.color = theme.primary;
+            showToast(`Theme switched to ${themeName.toUpperCase()}`);
+        }
+
+        function selectPreset(index) {
+            currentPresetIndex = index;
+            document.querySelectorAll('.preset-btn').forEach((btn, i) => {
+                if (i === index) {
+                    btn.classList.add('border-cyan-500', 'bg-sonic-800');
+                    btn.querySelector('i').classList.remove('text-transparent');
+                } else {
+                    btn.classList.remove('border-cyan-500', 'bg-sonic-800');
+                    btn.classList.add('border-gray-700');
+                    btn.querySelector('i').classList.add('text-transparent');
+                }
+            });
+            document.getElementById('current-track-name').textContent = presets[index].name;
+            document.getElementById('current-track-preset').textContent = presets[index].subtitle;
+            document.getElementById('lyric-title').textContent = presets[index].name.toUpperCase();
+            document.getElementById('lyric-subtitle').textContent = presets[index].subtitle;
+            showToast(`Loaded: ${presets[index].name}`);
+        }
+
+        function nextPreset() {
+            currentPresetIndex = (currentPresetIndex + 1) % presets.length;
+            selectPreset(currentPresetIndex);
+        }
+
+        function prevPreset() {
+            currentPresetIndex = (currentPresetIndex - 1 + presets.length) % presets.length;
+            selectPreset(currentPresetIndex);
+        }
+
+        // Render Loop
+        function renderVisualizer() {
+            requestAnimationFrame(renderVisualizer);
+
+            ctx.fillStyle = 'rgba(3, 7, 18, 0.25)';
+            ctx.fillRect(0, 0, width, height);
+
+            let dataArray = new Uint8Array(128);
+            if (analyser && isPlaying && audioCtx && audioCtx.state === 'running') {
+                analyser.getByteFrequencyData(dataArray);
+            } else {
+                for (let i = 0; i < 128; i++) {
+                    dataArray[i] = Math.sin(Date.now() * 0.003 + i * 0.1) * 35 + 45;
+                }
+            }
+
+            let theme = themeColors[currentTheme];
+            let sensitivity = parseFloat(document.getElementById('range-sensitivity').value);
+
+            // Draw Particles
+            particles.forEach((p) => {
+                p.x += p.vx;
+                p.y += p.vy;
+                if (p.x < 0) p.x = width;
+                if (p.x > width) p.x = 0;
+                if (p.y < 0) p.y = height;
+                if (p.y > height) p.y = 0;
+
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fillStyle = theme.primary;
+                ctx.globalAlpha = p.alpha;
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+            });
+
+            // Visualizer Modes
+            if (visMode === 'spectrum') {
+                const barWidth = (width / 64) - 2;
+                let x = 0;
+                for (let i = 0; i < 64; i++) {
+                    let barHeight = (dataArray[i] / 255) * (height * 0.5) * sensitivity;
+
+                    let gradient = ctx.createLinearGradient(0, height, 0, height - barHeight);
+                    gradient.addColorStop(0, theme.secondary);
+                    gradient.addColorStop(1, theme.primary);
+
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(x, height - barHeight - 45, barWidth, barHeight);
+
+                    x += barWidth + 2;
+                }
+            } else if (visMode === 'radial') {
+                ctx.save();
+                ctx.translate(width / 2, height / 2);
+                let radius = Math.min(width, height) * 0.22;
+
+                ctx.beginPath();
+                for (let i = 0; i < 128; i++) {
+                    let angle = (i / 128) * Math.PI * 2;
+                    let val = (dataArray[i] / 255) * 85 * sensitivity;
+                    let r = radius + val;
+                    let x = Math.cos(angle) * r;
+                    let y = Math.sin(angle) * r;
+
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+                ctx.strokeStyle = theme.primary;
+                ctx.lineWidth = 3;
+                ctx.shadowColor = theme.primary;
+                ctx.shadowBlur = 20;
+                ctx.stroke();
+
+                ctx.beginPath();
+                let avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+                ctx.arc(0, 0, radius * 0.4 + (avg * 0.3 * sensitivity), 0, Math.PI * 2);
+                ctx.fillStyle = theme.glow;
+                ctx.fill();
+
+                ctx.restore();
+            } else if (visMode === 'tunnel') {
+                ctx.save();
+                ctx.translate(width / 2, height / 2);
+                let rings = 8;
+                let time = Date.now() * 0.001;
+
+                for (let i = rings; i > 0; i--) {
+                    let bass = dataArray[i * 4] / 255;
+                    let r = (i * 65) + (bass * 85 * sensitivity) + ((time * 40) % 65);
+
+                    ctx.beginPath();
+                    ctx.arc(0, 0, r, 0, Math.PI * 2);
+                    ctx.strokeStyle = i % 2 === 0 ? theme.primary : theme.secondary;
+                    ctx.lineWidth = 2 + bass * 4;
+                    ctx.stroke();
+                }
+                ctx.restore();
+            }
+
+            // Kinetic Typography Beat Scaling
+            let avgVal = dataArray.slice(0, 16).reduce((a, b) => a + b, 0) / 16;
+            let scale = 1 + (avgVal / 255) * 0.14 * sensitivity;
+            let lyricTitle = document.getElementById('lyric-title');
+            lyricTitle.style.transform = `scale(${scale})`;
+            lyricTitle.style.color = theme.primary;
+        }
+
+        // Mouse Parallax
+        const canvasContainer = document.getElementById('canvas-container');
+        canvasContainer.addEventListener('mousemove', (e) => {
+            const rect = canvasContainer.getBoundingClientRect();
+            mouse.x = (e.clientX - rect.left) / width - 0.5;
+            mouse.y = (e.clientY - rect.top) / height - 0.5;
+
+            let lyricLayer = document.getElementById('kinetic-text-layer');
+            lyricLayer.style.transform = `translate(${mouse.x * 25}px, ${mouse.y * 25}px)`;
+        });
+
+        // Control Sliders Listeners
+        document.getElementById('range-cutoff').addEventListener('input', (e) => {
+            let val = e.target.value;
+            document.getElementById('val-cutoff').textContent = val + ' Hz';
+            if (filterNode) filterNode.frequency.value = parseFloat(val);
+        });
+
+        document.getElementById('range-density').addEventListener('input', (e) => {
+            let val = e.target.value;
+            document.getElementById('val-density').textContent = val;
+            initParticles();
+        });
+
+        document.getElementById('range-sensitivity').addEventListener('input', (e) => {
+            let val = e.target.value;
+            document.getElementById('val-sensitivity').textContent = parseFloat(val).toFixed(1) + 'x';
+        });
+
+        document.getElementById('master-volume').addEventListener('input', (e) => {
+            let val = e.target.value;
+            if (masterGain) masterGain.gain.value = parseFloat(val);
+        });
+
+        // Start Loop on Load
+        window.onload = function() {
+            renderVisualizer();
+        };
+    </script>
+</body>
+</html>
